@@ -1,12 +1,11 @@
 import random
 import string
-import redis
 import hashlib
 from fastapi import FastAPI
 from starlette.responses import RedirectResponse
+from database import conn
 
 app = FastAPI()
-r = redis.Redis(host='localhost', port=6379, decode_responses=True)
 
 
 @app.get("/")
@@ -18,22 +17,27 @@ async def root():
 async def generate(code: str, message: str):
     secret_key = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
     hashed_code = hashlib.sha256(code.encode('utf-8')).hexdigest()
-    r.hset(secret_key, mapping={
+    conn.hset(secret_key, mapping={
         'code': hashed_code,
         'message': message
     })
-    return {"key": secret_key}
+    return {
+        'key': secret_key,
+        'link': f'http://127.0.0.1:8000/secrets/{secret_key}?code={code}'
+    }
 
 
 @app.get("/secrets/{secret_key}")
 async def secrets(secret_key: str, code: str):
-    tmp = r.hgetall(secret_key)
+    info_by_secret_key = conn.hgetall(secret_key)
     hashed_code = hashlib.sha256(code.encode('utf-8')).hexdigest()
-    if tmp.get('code') == hashed_code:
-        response = tmp.get('message')
-        r.delete(secret_key)
+    if info_by_secret_key.get('code') == hashed_code:
+        response = info_by_secret_key.get('message')
+        conn.delete(secret_key)
         return response
-    return None
+    elif info_by_secret_key:
+        return {'message': 'Code is wrong'}
+    return {'message': 'Secret key doesn\'t exist'}
 
 
 @app.get("/meme")
