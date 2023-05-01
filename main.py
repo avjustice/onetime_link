@@ -1,35 +1,39 @@
 import random
 import string
-
+import redis
+import hashlib
 from fastapi import FastAPI
 from starlette.responses import RedirectResponse
 
 app = FastAPI()
-MY_DICT = {}
+r = redis.Redis(host='localhost', port=6379, decode_responses=True)
 
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Hello"}
 
 
 @app.get("/generate")
 async def generate(code: str, message: str):
-    secret_key = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(8))
-    MY_DICT[secret_key] = {
-        'code': code,
+    secret_key = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
+    hashed_code = hashlib.sha256(code.encode('utf-8')).hexdigest()
+    r.hset(secret_key, mapping={
+        'code': hashed_code,
         'message': message
-    }
+    })
     return {"key": secret_key}
 
 
 @app.get("/secrets/{secret_key}")
-async def say_hello(secret_key: str, code: str):
-    if secret_key in MY_DICT and MY_DICT[secret_key]['code'] == code:
-        response = MY_DICT[secret_key]['message']
-        del MY_DICT[secret_key]
+async def secrets(secret_key: str, code: str):
+    tmp = r.hgetall(secret_key)
+    hashed_code = hashlib.sha256(code.encode('utf-8')).hexdigest()
+    if tmp.get('code') == hashed_code:
+        response = tmp.get('message')
+        r.delete(secret_key)
         return response
-    return {"message": "key not found or code is bad"}
+    return None
 
 
 @app.get("/meme")
