@@ -38,8 +38,3 @@ async def secrets(secret_key: str, code: str):
     elif info_by_secret_key:
         return {'message': 'Code is wrong'}
     return {'message': 'Secret key doesn\'t exist'}
-
-
-@app.get("/meme")
-async def get_teleport() -> RedirectResponse:
-    return RedirectResponse(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
