@@ -2,7 +2,6 @@ import random
 import string
 import hashlib
 from fastapi import FastAPI
-from starlette.responses import RedirectResponse
 from database import conn
 
 app = FastAPI()
