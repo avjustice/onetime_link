@@ -35,5 +35,5 @@ async def secrets(secret_key: str, code: str):
         conn.delete(secret_key)
         return response
     elif info_by_secret_key:
-        return {'message': 'Code is wrong'}
+        return {'message': 'Code is not right'}
     return {'message': 'Secret key doesn\'t exist'}
